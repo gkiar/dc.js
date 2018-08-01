@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>dc.js - Sparkline Example</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" type="text/css" href="../css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="../css/dc.css"/>
+</head>
+<body>
+
+<div class="container">
+<script type="text/javascript" src="header.js"></script>
+  <h3>Sparklines</h3>
+ <p>A sparkline  is just a tiny chart that fits in to the flow of text. We can achieve this by using a <code>span</code> instead of a <code>div</code>, and making the dimensions really small. They will work well for any chart with a large x:y aspect ratio, like a line chart <span id="linetest"></span> or a bar chart but other kinds of charts probably won't work so well. We'll also use a little bit of custom CSS to hide the axes (see <a href="https://github.com/dc-js/dc.js/blob/develop/web/examples/sparkline.html">the source</a> for details).</p>
+<p> words</p>
+<div id="bartest"></div>
+<div id="pietest"></div>
+
+<script type="text/javascript" src="../js/d3.js"></script>
+<script type="text/javascript" src="../js/crossfilter.js"></script>
+<script type="text/javascript" src="../js/dc.js"></script>
+<style>
+  .dc-chart .axis {
+    display: none;
+  }
+</style>
+<script type="text/javascript">
+
+  var barChart = dc.barChart("#bartest");
+  var lineChart = dc.lineChart("#linetest");
+  // var pieChart = dc.pieChart("#pietest");
+  d3.csv("task-0-usage.csv").then(function(experiments) {
+
+      ramxperiments = experiments.filter(function(row){
+         return row['ram'] !== ""
+      });
+
+      var ndx                  = crossfilter(ramxperiments),
+          runDimension         = ndx.dimension(function(d) {return +d.ram;}),
+          runDimension2        = ndx.dimension(function(d) {return +d.ram;}),
+          //runDimension3        = ndx.dimension(function(d) {return +d.Expt;}),
+          speedSumGroup        = runDimension.group().reduceCount();
+          speedSumGroup2       = runDimension2.group().reduceCount();
+          //experimeGroup3       = runDimension3.group(); //(function(d) {return d.Expt;});
+
+      console.log(speedSumGroup2.all())
+      debugger;
+      barChart
+          .width(300)
+          .height(180)
+          .margins({left: 0, top: 0, right: 0, bottom: 0})
+          .x(d3.scaleLinear().domain(d3.extent(speedSumGroup.all(),function(d) {return d.key})))
+          .brushOn(true)
+          .gap(10)
+          .dimension(runDimension)
+          .group(speedSumGroup);
+      lineChart
+          .width(100)
+          .height(200)
+          .margins({left: 0, top: 0, right: 0, bottom: 0})
+          .x(d3.scaleLinear().domain(d3.extent(speedSumGroup2.all(),function(d) {return d.key})))
+          .brushOn(true)
+          .dimension(runDimension2)
+          .group(speedSumGroup2);
+    //  pieChart
+    //      .width(768)
+    //      .height(480)
+    //      //.slicesCap(9)
+    //      .innerRadius(100)
+    //      .externalLabels(50)
+    //      .externalRadiusPadding(50)
+    //      .drawPaths(true)
+    //      .dimension(runDimension3)
+    //      .group(experimeGroup3)
+    //      .legend(dc.legend());
+      dc.renderAll();
+  });
+//  d3.csv("morley.csv").then(function(experiments) {
+//
+//      experiments.forEach(function(x) {
+//          x.Speed = +x.Speed;
+//      });
+//
+//      var ndx                  = crossfilter(experiments),
+//          runDimension         = ndx.dimension(function(d) {return +d.Run;}),
+//          runDimension2        = ndx.dimension(function(d) {return +d.Run;}),
+//          runDimension3        = ndx.dimension(function(d) {return +d.Run;}),
+//          speedSumGroup        =  runDimension.group().reduceSum(function(d) {return d.Speed * d.Run / 1000;}),
+//          speedSumGroup2       = runDimension2.group().reduceSum(function(d) {return d.Speed * d.Run / 1000;});
+//          speedSumGroup3       = runDimension3.group().reduceSum(function(d) {return d.Speed * d.Run / 1000;});
+//
+//      barChart
+//          .width(300)
+//          .height(180)
+//          .margins({left: 0, top: 0, right: 0, bottom: 0})
+//          .x(d3.scaleLinear().domain([6,20]))
+//          .brushOn(true)
+//          .dimension(runDimension)
+//          .group(speedSumGroup);
+//      lineChart
+//          .width(100)
+//          .height(20)
+//          .margins({left: 0, top: 0, right: 0, bottom: 0})
+//          .x(d3.scaleLinear().domain([6,20]))
+//          .brushOn(true)
+//          .dimension(runDimension2)
+//          .group(speedSumGroup2);
+//      pieChart
+//          .width(768)
+//          .height(480)
+//          //.slicesCap(9)
+//          .innerRadius(100)
+//          .externalLabels(50)
+//          .externalRadiusPadding(50)
+//          .drawPaths(true)
+//          .dimension(runDimension3)
+//          .group(speedSumGroup3)
+//          .legend(dc.legend());
+//      dc.renderAll();
+//  });
+
+</script>
+
+</div>
+</body>
+</html>
