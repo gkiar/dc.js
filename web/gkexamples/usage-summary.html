@@ -9,13 +9,16 @@
 <body>
 
 <div class="container">
-<script type="text/javascript" src="header.js"></script>
-  <h3>Sparklines</h3>
- <p>A sparkline  is just a tiny chart that fits in to the flow of text. We can achieve this by using a <code>span</code> instead of a <code>div</code>, and making the dimensions really small. They will work well for any chart with a large x:y aspect ratio, like a line chart <span id="linetest"></span> or a bar chart but other kinds of charts probably won't work so well. We'll also use a little bit of custom CSS to hide the axes (see <a href="https://github.com/dc-js/dc.js/blob/develop/web/examples/sparkline.html">the source</a> for details).</p>
-<p> words</p>
-<div id="bartest"></div>
-<div id="pietest"></div>
+<div style="padding: 20vw 20vh">
+<div style="width:50%" id="linetest"></div>
 
+<div style="width:50%" id="bartest" style="">
+</div>
+<br/>
+<div id="pietest">
+<h5><strong>Task</strong></h5>
+</div>
+</div>
 <script type="text/javascript" src="../js/d3.js"></script>
 <script type="text/javascript" src="../js/crossfilter.js"></script>
 <script type="text/javascript" src="../js/dc.js"></script>
@@ -26,53 +29,102 @@
 </style>
 <script type="text/javascript">
 
-  var barChart = dc.barChart("#bartest");
-  var lineChart = dc.lineChart("#linetest");
-  // var pieChart = dc.pieChart("#pietest");
-  d3.csv("task-0-usage.csv").then(function(experiments) {
+  var boxPlot = dc.boxPlot("#bartest"),
+      pieChart = dc.pieChart("#pietest");
 
-      ramxperiments = experiments.filter(function(row){
-         return row['ram'] !== ""
+  function getCSVFileList(){
+    var data_directory = './newtask/',
+        file_list = ['task-0-usage_summary.csv',
+                     'task-1-usage_summary.csv',
+                     'task-2-usage_summary.csv',
+                     'task-3-usage_summary.csv',
+                     'task-4-usage_summary.csv',
+                     'task-5-usage_summary.csv',
+                     'task-6-usage_summary.csv',
+                     'task-7-usage_summary.csv',
+                     'task-8-usage_summary.csv',
+                     'task-9-usage_summary.csv'];
+    return file_list.map(function(file){return data_directory + file});
+  };
+
+  var dataFiles = getCSVFileList(),
+      dataFilePromises = dataFiles.map(function(url){
+        return d3.csv(url)
+      }),
+      dataFilesFlat = Promise.all(dataFilePromises).then(function(listData) {
+        return [].concat.apply([], listData);
       });
 
-      var ndx                  = crossfilter(ramxperiments),
-          runDimension         = ndx.dimension(function(d) {return +d.ram;}),
-          runDimension2        = ndx.dimension(function(d) {return +d.ram;}),
-          //runDimension3        = ndx.dimension(function(d) {return +d.Expt;}),
-          speedSumGroup        = runDimension.group().reduceCount();
-          speedSumGroup2       = runDimension2.group().reduceCount();
-          //experimeGroup3       = runDimension3.group(); //(function(d) {return d.Expt;});
+  dataFilesFlat.then(function(tasks) {
+      console.log(tasks)
+      newram = tasks.map(function(task){
+        var newt = task.ram.split("\n").join(" ").split(/\s+/)
+        if (newt[newt.length-1] == "]") {
+          newt.pop()
+          newt[newt.length-1] += "]"
+        }
+        return JSON.parse(newt.join(", "))
+      });
 
-      console.log(speedSumGroup2.all())
-      debugger;
-      barChart
-          .width(300)
-          .height(180)
-          .margins({left: 0, top: 0, right: 0, bottom: 0})
-          .x(d3.scaleLinear().domain(d3.extent(speedSumGroup.all(),function(d) {return d.key})))
-          .brushOn(true)
-          .gap(10)
-          .dimension(runDimension)
-          .group(speedSumGroup);
-      lineChart
-          .width(100)
-          .height(200)
-          .margins({left: 0, top: 0, right: 0, bottom: 0})
-          .x(d3.scaleLinear().domain(d3.extent(speedSumGroup2.all(),function(d) {return d.key})))
-          .brushOn(true)
-          .dimension(runDimension2)
-          .group(speedSumGroup2);
-    //  pieChart
-    //      .width(768)
-    //      .height(480)
-    //      //.slicesCap(9)
-    //      .innerRadius(100)
-    //      .externalLabels(50)
-    //      .externalRadiusPadding(50)
-    //      .drawPaths(true)
-    //      .dimension(runDimension3)
-    //      .group(experimeGroup3)
-    //      .legend(dc.legend());
+      for (i=0; i < tasks.length; i++){
+        tasks[i].ram = newram[i]
+      }
+
+      var tdx          = crossfilter(tasks),
+          taskDim_pie  = tdx.dimension(function(d) {return d.task}),
+          taskGrp_pie  = taskDim_pie.group(),
+
+          taskDim_box  = tdx.dimension(function(d) {return d.task}),
+          ramGrp_box   = taskDim_box.group().reduce(
+            function (p, v) {
+              // Retrieve the data value, if not Infinity or null add it.
+              let dv = v.ram;
+              if (dv != Infinity && dv != null) p.push(dv);
+              return p;
+            },
+            function (p, v) {
+              // Retrieve the data value, if not Infinity or null remove it.
+              let dv = v.ram;
+              if (dv != Infinity && dv != null) p.splice(p.indexOf(dv), 1);
+              return p;
+            },
+            function () {
+              return [];
+          }),
+          taskDim      = tdx.dimension(function(d) {return d.task}),
+          taskGrp_bar  = taskDim_pie.group(),
+          taskDim2     = tdx.dimension(function(d) {return d.task}),
+          timeDim      = tdx.dimension(function(d) {return d.duration}),
+          ramGrp    = taskDim.group().reduceSum(function(d){return d.ram});
+
+      console.log(ramGrp.all())
+      boxPlot
+          .width(480)
+          .height(300)
+          .dimension(taskDim_box)
+          .group(ramGrp_box)
+          .tickFormat(d3.format('.1f'))
+          .renderDataPoints(true)
+          .renderTitle(true)
+          .dataWidthPortion(0.50)
+          .boldOutlier(true)
+          .yAxisLabel("RAM Usage")
+          .xAxisLabel("Task")
+          .elasticY(true)
+          .elasticX(true)
+      ;
+      pieChart
+          .width(768)
+          .height(480)
+          //.slicesCap(9)
+          .innerRadius(100)
+          .externalLabels(50)
+          .externalRadiusPadding(50)
+          .drawPaths(true)
+          .dimension(taskDim_pie)
+          .group(taskGrp_pie)
+          // .legend(dc.legend())
+      ;
       dc.renderAll();
   });
 //  d3.csv("morley.csv").then(function(experiments) {
